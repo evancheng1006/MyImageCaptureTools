@@ -139,6 +139,40 @@ class CameraController():
 			self.cams[i].stopCapture()
 		return images
 
+	def dark_current_test(self):
+		num_images = 25
+		data = []
+		ret = 'dark current test, unit: grayscale value (0-255)\n'
+		for i in range(self.num_cams):
+			self.cams[i].startCapture()
+			for j in range(num_images):
+				image = self.cams[i].retrieveBuffer()
+				data.append(image.getData())
+			pxs = np.concatenate(data, axis=0)
+			ret += 'Camera %d (sn:%d) pixel max=%d, min=%d, median=%d, mean=%f, std=%f\n' % (i,
+				self.idx_to_sn[i], np.max(pxs), np.min(pxs), np.median(pxs), np.mean(pxs), np.std(pxs))
+			self.cams[i].stopCapture()
+		return ret
+
+	def noise_test(self):
+		num_images = 25
+		data = []
+		ret = 'noise test, unit: grayscale value (0-255)\n'
+		for i in range(self.num_cams):
+			self.cams[i].startCapture()
+			for j in range(num_images):
+				image = self.cams[i].retrieveBuffer()
+				data.append(image.getData())
+			pxs = np.stack(data, axis=1)
+			pxs_stds = np.std(data, axis=0, ddof=1)
+			pxs_std = np.mean(pxs_stds)
+			#print(pxs.shape)
+			#print(pxs_stds.shape)
+			ret += 'Camera %d (sn:%d) noise std=%f\n' % (i,
+				self.idx_to_sn[i], pxs_std)
+			self.cams[i].stopCapture()
+		return ret
+
 	def cam_config_to_str(self):
 		ret = ''
 		for i in range(self.num_cams):
@@ -179,6 +213,8 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.ui.btn_short_cam_shutter.clicked.connect(self.btn_short_cam_shutter)
 		self.ui.btn_tag_test.clicked.connect(self.btn_tag_test)
 		self.ui.btn_tag_calib_extrinsic.clicked.connect(self.btn_tag_calib_extrinsic)
+		self.ui.btn_dark_current_test.clicked.connect(self.btn_dark_current_test)
+		self.ui.btn_noise_test.clicked.connect(self.btn_noise_test)
 		self.ui.msg.setText(self.cc.cam_config_to_str())
 		self.timer=QTimer(self)
 		self.timer.timeout.connect(self.update)
@@ -222,32 +258,45 @@ class MainWindow(QtWidgets.QMainWindow):
 		msg += 'timestamp = %s\n' % timestamp
 		for i in range(self.cc.num_cams):
 			sn = self.cc.idx_to_sn[i]
-			fn_img = 'image-%s-%s.pgm' % (sn,timestamp)
-			fn_txt = 'image-%s-%s_prop.txt' % (sn,timestamp)
-			msg += 'saving image to %s' % fn_img
-			msg += 'saving image property to %s' % fn_txt
+			fn_img_basename = 'image-%s-%s.pgm' % (sn,timestamp)
+			fn_txt_basename = 'image-%s-%s_prop.txt' % (sn,timestamp)
+			img_dir = 'images/'
+			fn_img = img_dir + '/' + fn_img_basename
+			fn_txt = img_dir + '/' + fn_txt_basename
+			msg += 'saving image to %s\n' % fn_img
+			msg += 'saving image property to %s\n' % fn_txt
 			prop = ''
-			prop += '%s\n' % fn_img
+			prop += '%s\n' % fn_img_basename
 			prop += 'tag = %s\n' % tag
-			prop += 'brightness = %f percent' % self.cc.cams[i].get_brightness()
-			prop += 'gain = %f dB' % self.cc.cams[i].get_gain()
-			prop += 'sharpness = %d' % self.cc.cams[i].get_sharpness()
-			prop += 'gamma = %f' % self.cc.cams[i].get_gamma()
-			prop += 'shutter = %f ms' % self.cc.cams[i].get_shutter()	
-			print(prop)
-
-
-
-
+			prop += 'brightness = %f percent\n' % self.cc.cams[i].get_brightness()
+			prop += 'gain = %f dB\n' % self.cc.cams[i].get_gain()
+			prop += 'sharpness = %d\n' % self.cc.cams[i].get_sharpness()
+			prop += 'gamma = %f\n' % self.cc.cams[i].get_gamma()
+			prop += 'shutter = %f ms\n' % self.cc.cams[i].get_shutter()	
+			#print(prop)
+			with open(fn_txt, 'w') as f:
+				f.write(prop)
+			cv2.imwrite(fn_img, self.images[i])
 		self.ui.msg.setText(msg)
+		QtWidgets.qApp.processEvents()
 		return
 
 	def btn_tag_test(self):
-		self.ui.plainTextEdit_Tag.setPlainText('test');
+		self.ui.plainTextEdit_Tag.setPlainText('test')
 		return
 
 	def btn_tag_calib_extrinsic(self):
-		self.ui.plainTextEdit_Tag.setPlainText('calib_extrinsic');
+		self.ui.plainTextEdit_Tag.setPlainText('calib_extrinsic')
+		return
+
+	def btn_dark_current_test(self):
+		msg = self.cc.dark_current_test()
+		self.ui.msg.setText(msg)
+		return
+
+	def btn_noise_test(self):
+		msg = self.cc.noise_test()
+		self.ui.msg.setText(msg)
 		return
 
 	def display_images(self):
