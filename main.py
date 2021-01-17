@@ -49,6 +49,16 @@ class Camera(PyCapture2.Camera):
 		return self.getProperty( PyCapture2.PROPERTY_TYPE.SHUTTER ).absValue
 	def get_sharpness(self):
 		return self.getProperty( PyCapture2.PROPERTY_TYPE.SHARPNESS ).valueA
+	def get_temperature(self):
+		# 3132 -> 313.2 K
+		return self.getProperty( PyCapture2.PROPERTY_TYPE.TEMPERATURE ).absValue
+	def get_temperature_str(self):
+		raw_temperature = self.get_temperature()
+		t_k = float(raw_temperature) * 100.0
+		t_c = t_k - 273.15
+		t_f = 1.8*t_c + 32
+		ret = '%.1fK/%.1fC/%.1fF' % (t_k, t_c, t_f)
+		return ret
 
 	# after you call set_*, you need to call empty_capture to really set those values
 	def set_brightness(self, absValue):
@@ -92,6 +102,7 @@ class Camera(PyCapture2.Camera):
 		ret += 'Current gamma - %f\n' % self.get_gamma()
 		ret += 'Current sharpness - %d\n' % self.get_sharpness()
 		ret += 'Current shutter - %f ms\n' % self.get_shutter()
+		ret += 'Camera temperature - %s\n' % self.get_temperature_str()
 		return ret
 
 	def print_camera_info(self):
@@ -144,13 +155,14 @@ class CameraController():
 		data = []
 		ret = 'dark current test, unit: grayscale value (0-255)\n'
 		for i in range(self.num_cams):
+			temperature_str = self.cams[i].get_temperature_str()
 			self.cams[i].startCapture()
 			for j in range(num_images):
 				image = self.cams[i].retrieveBuffer()
 				data.append(image.getData())
 			pxs = np.concatenate(data, axis=0)
-			ret += 'Camera %d (sn:%d) pixel max=%d, min=%d, median=%d, mean=%f, std=%f\n' % (i,
-				self.idx_to_sn[i], np.max(pxs), np.min(pxs), np.median(pxs), np.mean(pxs), np.std(pxs))
+			ret += 'Camera %d (sn:%d) temperature:%s, pixel max=%d, min=%d, median=%d, mean=%f, std=%f\n' % \
+			(i, self.idx_to_sn[i], temperature_str, np.max(pxs), np.min(pxs), np.median(pxs), np.mean(pxs), np.std(pxs))
 			self.cams[i].stopCapture()
 		return ret
 
@@ -159,6 +171,7 @@ class CameraController():
 		data = []
 		ret = 'noise test, unit: grayscale value (0-255)\n'
 		for i in range(self.num_cams):
+			temperature_str = self.cams[i].get_temperature_str()
 			self.cams[i].startCapture()
 			for j in range(num_images):
 				image = self.cams[i].retrieveBuffer()
@@ -168,8 +181,8 @@ class CameraController():
 			pxs_std = np.mean(pxs_stds)
 			#print(pxs.shape)
 			#print(pxs_stds.shape)
-			ret += 'Camera %d (sn:%d) noise std=%f\n' % (i,
-				self.idx_to_sn[i], pxs_std)
+			ret += 'Camera %d (sn:%d)  temperature:%s, noise std=%f\n' % (i,
+				self.idx_to_sn[i], temperature_str, pxs_std)
 			self.cams[i].stopCapture()
 		return ret
 
@@ -184,6 +197,7 @@ class CameraController():
 			ret += 'Current gamma - %f\n' % self.cams[i].get_gamma()
 			ret += 'Current sharpness - %d\n' % self.cams[i].get_sharpness()
 			ret += 'Current shutter - %f ms\n' % self.cams[i].get_shutter()
+			ret += 'Camera temperature - %s\n' % self.cams[i].get_temperature_str()
 		return ret
 
 # class RealTimeImageUpdateWorker(QRunnable):
