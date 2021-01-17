@@ -178,11 +178,10 @@ class CameraController():
 				data.append(image.getData())
 			pxs = np.stack(data, axis=1)
 			pxs_stds = np.std(data, axis=0, ddof=1)
-			pxs_std = np.mean(pxs_stds)
 			#print(pxs.shape)
 			#print(pxs_stds.shape)
-			ret += 'Camera %d (sn:%d)  temperature:%s, noise std=%f\n' % (i,
-				self.idx_to_sn[i], temperature_str, pxs_std)
+			ret += 'Camera %d (sn:%d) temperature:%s, noise avg std=%f, median std=%f, max std=%f, min std=%f\n' % (i,
+				self.idx_to_sn[i], temperature_str, np.mean(pxs_stds), np.median(pxs_stds), np.max(pxs_stds), np.min(pxs_stds))
 			self.cams[i].stopCapture()
 		return ret
 
