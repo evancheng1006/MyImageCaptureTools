@@ -27,6 +27,10 @@ def print_build_info():
 	print('PyCapture2 library version: %d %d %d %d' % (lib_ver[0], lib_ver[1], lib_ver[2], lib_ver[3]))
 	print()
 
+# https://stackoverflow.com/questions/5998245/get-current-time-in-milliseconds-in-python
+def current_milli_time():
+	return round(time.time() * 1000)
+
 
 
 class Camera(PyCapture2.Camera):
@@ -71,23 +75,28 @@ class Camera(PyCapture2.Camera):
 		self.retrieveBuffer()
 		self.stopCapture()
 
-	def print_camera_info(self):
+	def camera_info_to_str(self):
 		cam_info = self.getCameraInfo()
-		print('\n*** CAMERA INFORMATION ***\n')
-		print('Serial number - %d' % cam_info.serialNumber)
-		print('Camera model - %s' % cam_info.modelName.decode())
-		print('Camera vendor - %s' % cam_info.vendorName.decode())
-		print('Sensor - %s' % cam_info.sensorInfo.decode())
-		print('Resolution - %s' % cam_info.sensorResolution.decode())
-		print('Firmware version - %s' % cam_info.firmwareVersion.decode())
-		print('Firmware build time - %s' % cam_info.firmwareBuildTime.decode())
-		print('Current brightness - %f' % self.get_brightness())
-		print('Current frame rate - %f frame(s) per second' % self.get_frame_rate())
-		print('Current gain - %f' % self.get_gain())
-		print('Current gamma - %f' % self.get_gamma())
-		print('Current sharpness - %d' % self.get_sharpness())
-		print('Current shutter - %f ms' % self.get_shutter())
-		print()
+		ret = ''
+		ret += '\n*** CAMERA INFORMATION ***\n'
+		ret += 'Serial number - %d\n' % cam_info.serialNumber
+		ret += 'Camera model - %s\n' % cam_info.modelName.decode()
+		ret += 'Camera vendor - %s\n' % cam_info.vendorName.decode()
+		ret += 'Sensor - %s\n' % cam_info.sensorInfo.decode()
+		ret += 'Resolution - %s\n' % cam_info.sensorResolution.decode()
+		ret += 'Firmware version - %s\n' % cam_info.firmwareVersion.decode()
+		ret += 'Firmware build time - %s\n' % cam_info.firmwareBuildTime.decode()
+		ret += 'Current brightness - %f\n' % self.get_brightness()
+		ret += 'Current frame rate - %f frame(s) per second\n' % self.get_frame_rate()
+		ret += 'Current gain - %f\n' % self.get_gain()
+		ret += 'Current gamma - %f\n' % self.get_gamma()
+		ret += 'Current sharpness - %d\n' % self.get_sharpness()
+		ret += 'Current shutter - %f ms\n' % self.get_shutter()
+		return ret
+
+	def print_camera_info(self):
+		print(self.camera_info_to_str())
+
 
 class CameraController():
 	def __init__(self):
@@ -130,6 +139,19 @@ class CameraController():
 			self.cams[i].stopCapture()
 		return images
 
+	def cam_config_to_str(self):
+		ret = ''
+		for i in range(self.num_cams):
+			cam_info = self.cams[i].getCameraInfo()
+			ret += 'Camera %d (sn:%d)\n' % (i, cam_info.serialNumber)
+			ret += 'Current brightness - %f\n' % self.cams[i].get_brightness()
+			ret += 'Current frame rate - %f frame(s) per second\n' % self.cams[i].get_frame_rate()
+			ret += 'Current gain - %f\n' % self.cams[i].get_gain()
+			ret += 'Current gamma - %f\n' % self.cams[i].get_gamma()
+			ret += 'Current sharpness - %d\n' % self.cams[i].get_sharpness()
+			ret += 'Current shutter - %f ms\n' % self.cams[i].get_shutter()
+		return ret
+
 # class RealTimeImageUpdateWorker(QRunnable):
 # 	def run(self):
 # 		self.can_update = False
@@ -155,12 +177,15 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.ui.btn_capture.clicked.connect(self.btn_capture)
 		self.ui.btn_long_cam_shutter.clicked.connect(self.btn_long_cam_shutter)
 		self.ui.btn_short_cam_shutter.clicked.connect(self.btn_short_cam_shutter)
+		self.ui.btn_tag_test.clicked.connect(self.btn_tag_test)
+		self.ui.btn_tag_calib_extrinsic.clicked.connect(self.btn_tag_calib_extrinsic)
+		self.ui.msg.setText(self.cc.cam_config_to_str())
 		self.timer=QTimer(self)
 		self.timer.timeout.connect(self.update)
 		self.timer.start(200)
 
-		self.threadpool = QThreadPool()
-		print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
+		# self.threadpool = QThreadPool()
+		# print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
 		# self.rtiuw = RealTimeImageUpdateWorker()
 		# self.threadpool.start(self.rtiuw)
 
@@ -172,6 +197,7 @@ class MainWindow(QtWidgets.QMainWindow):
 			self.cc.cams[i].set_gamma(1.0)
 			self.cc.cams[i].set_shutter(10.0)
 			self.cc.cams[i].empty_capture() # save settings
+		self.ui.msg.setText(self.cc.cam_config_to_str())
 		return
 
 	def btn_short_cam_shutter(self):
@@ -182,10 +208,46 @@ class MainWindow(QtWidgets.QMainWindow):
 			self.cc.cams[i].set_gamma(1.0)
 			self.cc.cams[i].set_shutter(1.0)
 			self.cc.cams[i].empty_capture() # save settings
+		self.ui.msg.setText(self.cc.cam_config_to_str())
 		return
 	
 	def btn_capture(self):
+		self.images = self.cc.capture_images()
+		# print(dir(self.ui.plainTextEdit_Tag))
+		tag = self.ui.plainTextEdit_Tag.toPlainText();
+		timestamp = current_milli_time()
 
+		msg = 'capture:\n'
+		msg += 'tag = %s\n' % tag
+		msg += 'timestamp = %s\n' % timestamp
+		for i in range(self.cc.num_cams):
+			sn = self.cc.idx_to_sn[i]
+			fn_img = 'image-%s-%s.pgm' % (sn,timestamp)
+			fn_txt = 'image-%s-%s_prop.txt' % (sn,timestamp)
+			msg += 'saving image to %s' % fn_img
+			msg += 'saving image property to %s' % fn_txt
+			prop = ''
+			prop += '%s\n' % fn_img
+			prop += 'tag = %s\n' % tag
+			prop += 'brightness = %f percent' % self.cc.cams[i].get_brightness()
+			prop += 'gain = %f dB' % self.cc.cams[i].get_gain()
+			prop += 'sharpness = %d' % self.cc.cams[i].get_sharpness()
+			prop += 'gamma = %f' % self.cc.cams[i].get_gamma()
+			prop += 'shutter = %f ms' % self.cc.cams[i].get_shutter()	
+			print(prop)
+
+
+
+
+		self.ui.msg.setText(msg)
+		return
+
+	def btn_tag_test(self):
+		self.ui.plainTextEdit_Tag.setPlainText('test');
+		return
+
+	def btn_tag_calib_extrinsic(self):
+		self.ui.plainTextEdit_Tag.setPlainText('calib_extrinsic');
 		return
 
 	def display_images(self):
@@ -199,7 +261,11 @@ class MainWindow(QtWidgets.QMainWindow):
 		qt_pixmap_merged = grayscale_ndarray_to_pixmap(merged)
 		self.ui.image.setPixmap(qt_pixmap_merged)
 
+	def save_images(self):
+		return
+
 	def update(self):
+		# print('image update')
 		self.images = self.cc.capture_images()
 		self.display_images()
 		return

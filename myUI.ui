@@ -30,17 +30,36 @@
      </layout>
     </item>
     <item>
-     <widget class="QLabel" name="msg">
+     <widget class="QLabel" name="label_Message">
       <property name="minimumSize">
        <size>
         <width>0</width>
-        <height>110</height>
+        <height>20</height>
        </size>
       </property>
       <property name="maximumSize">
        <size>
         <width>16777215</width>
-        <height>110</height>
+        <height>20</height>
+       </size>
+      </property>
+      <property name="text">
+       <string>Message</string>
+      </property>
+     </widget>
+    </item>
+    <item alignment="Qt::AlignLeft|Qt::AlignTop">
+     <widget class="QLabel" name="msg">
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>200</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>200</height>
        </size>
       </property>
       <property name="text">
@@ -79,7 +98,7 @@
         </property>
        </widget>
       </item>
-      <item alignment="Qt::AlignLeft">
+      <item>
        <widget class="QPushButton" name="btn_capture">
         <property name="maximumSize">
          <size>
@@ -89,6 +108,59 @@
         </property>
         <property name="text">
          <string>Capture</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_Tag">
+        <property name="text">
+         <string>Tag:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPlainTextEdit" name="plainTextEdit_Tag">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>800</width>
+          <height>30</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout_2">
+      <item>
+       <widget class="QPushButton" name="btn_tag_calib_extrinsic">
+        <property name="maximumSize">
+         <size>
+          <width>250</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>Tag='calib_extrinsic'</string>
+        </property>
+       </widget>
+      </item>
+      <item alignment="Qt::AlignLeft">
+       <widget class="QPushButton" name="btn_tag_test">
+        <property name="maximumSize">
+         <size>
+          <width>100</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>Tag='test'</string>
         </property>
        </widget>
       </item>
