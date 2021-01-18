@@ -285,7 +285,8 @@ class MainWindow(QtWidgets.QMainWindow):
 			prop += 'gain = %f dB\n' % self.cc.cams[i].get_gain()
 			prop += 'sharpness = %d\n' % self.cc.cams[i].get_sharpness()
 			prop += 'gamma = %f\n' % self.cc.cams[i].get_gamma()
-			prop += 'shutter = %f ms\n' % self.cc.cams[i].get_shutter()	
+			prop += 'shutter = %f ms\n' % self.cc.cams[i].get_shutter()
+			prop += 'temperature = %s\n' % self.cc.cams[i].get_temperature_str()
 			#print(prop)
 			with open(fn_txt, 'w') as f:
 				f.write(prop)
