@@ -222,6 +222,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.ui = UI.Ui_MainWindow()
 		self.ui.setupUi(self)
 		self.ui.btn_capture.clicked.connect(self.btn_capture)
+		self.ui.btn_interval_capture.clicked.connect(self.btn_interval_capture)
 		self.ui.btn_long_cam_shutter.clicked.connect(self.btn_long_cam_shutter)
 		self.ui.btn_short_cam_shutter.clicked.connect(self.btn_short_cam_shutter)
 		self.ui.btn_tag_test.clicked.connect(self.btn_tag_test)
@@ -260,13 +261,16 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.ui.msg.setText(self.cc.cam_config_to_str())
 		return
 	
-	def btn_capture(self):
+	def btn_capture(self, init_msg=None):
 		self.images = self.cc.capture_images()
 		# print(dir(self.ui.plainTextEdit_Tag))
-		tag = self.ui.plainTextEdit_Tag.toPlainText();
+		tag = self.ui.plainTextEdit_Tag.toPlainText()
 		timestamp = current_milli_time()
 
-		msg = 'capture:\n'
+		msg = ''
+		if init_msg:
+			msg = str(init_msg)
+		msg += 'capture:\n'
 		msg += 'tag = %s\n' % tag
 		msg += 'timestamp = %s\n' % timestamp
 		for i in range(self.cc.num_cams):
@@ -293,6 +297,42 @@ class MainWindow(QtWidgets.QMainWindow):
 			cv2.imwrite(fn_img, self.images[i])
 		self.ui.msg.setText(msg)
 		QtWidgets.qApp.processEvents()
+		return
+
+	def btn_interval_capture(self):
+		min_intv_ms = 100
+		intv_cap_ms_str = self.ui.plainTextEdit_interval_capture_ms.toPlainText()
+		intv_cap_times_str = self.ui.plainTextEdit_interval_capture_times.toPlainText()
+		msg = 'interval_capture:\n'
+		try:
+			intv_cap_ms = float(intv_cap_ms_str)
+		except ValueError:
+			msg += 'error parsing ms\n'
+			self.ui.msg.setText(msg)
+			return
+		try:
+			intv_cap_times = int(intv_cap_times_str)
+		except ValueError:
+			msg += 'error parsing times\n'
+			self.ui.msg.setText(msg)
+			return
+
+		if intv_cap_ms < min_intv_ms:
+			msg += 'error: please use longer interval (>=%fms)\n' % min_intv_ms
+			self.ui.msg.setText(msg)
+			return
+		if intv_cap_times < 1:
+			msg += 'error: at least 1 time\n'
+			self.ui.msg.setText(msg)
+			return
+
+		msg += 'capture every %f ms for %d time(s)\n' % (intv_cap_ms, intv_cap_times)
+		self.ui.msg.setText(msg)
+		QtWidgets.qApp.processEvents()
+		for i in range(intv_cap_times):
+			tmp_msg = msg + '%d out of %d \n'% (i+1, intv_cap_times)
+			time.sleep(float(intv_cap_ms) * 0.001)
+			self.btn_capture(init_msg=tmp_msg)
 		return
 
 	def btn_tag_test(self):
